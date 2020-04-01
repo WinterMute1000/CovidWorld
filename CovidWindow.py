@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QWidget,QGridLayout,QLabel
 from PyQt5.QtGui import QIcon
 import CovidCrawler,sys
 
-MENU_CODE={'CONFIRMED':1,'ACTIVE':2,'DEATH':3,'RELEASED':4,'INCREASEMENT':5} #confirm selected menu to use refresh
+MENU_CODE={'CONFIRMED':1,'ACTIVE':2,'DEATH':3,'RELEASED':4,'INCREASEMENT':5,'RELEASED_RATE':6,'DEATH_RATE':7} #confirm selected menu to use refresh
 class CovidWindow(QMainWindow):#Covid Windows
     selected_menu=0
     class CovidWidget(QWidget): #Windows Center Layout
@@ -59,8 +59,12 @@ class CovidWindow(QMainWindow):#Covid Windows
                     measure=d['death']
                 elif selected_menu==MENU_CODE['RELEASED']:
                     measure=d['released']
-                else:
+                elif selected_menu==MENU_CODE['INCREASEMENT']:
                     measure=d['confirmed']-d['confirmed_prev']
+                elif selected_menu==MENU_CODE['RELEASED_RATE']:
+                    measure=str(d['releasedRate'])+'%'
+                elif selected_menu==MENU_CODE['DEATH_RATE']:
+                    measure=str(d['deathRate'])+'%'
                     
                 self.data_label[label_idx][0].setText(nation)
                 self.data_label[label_idx][1].setText(str(measure))
@@ -105,9 +109,17 @@ class CovidWindow(QMainWindow):#Covid Windows
         increasement_action.setStatusTip('현재 확진자 증가 수를 보여줍니다.(상위 20개국만)')
         increasement_action.triggered.connect(self.show_increasement)
         
-        increasement_action=QAction(QIcon('refresh.png'),'최신정보로 갱신',self)
-        increasement_action.setStatusTip('최신 정보를 불러옵니다.')
-        increasement_action.triggered.connect(self.refresh)
+        released_rate_action=QAction('완치자 비율',self)
+        released_rate_action.setStatusTip('현재 완치자 비율을 보여줍니다.(상위 20개국만,확진자 )'+str(CovidCrawler.RATE_STANDARD)+'명 이상 국가만')
+        released_rate_action.triggered.connect(self.show_released_rate)
+        
+        death_rate_action=QAction('사망자 비율',self)
+        death_rate_action.setStatusTip('현재 사망자 비율을 보여줍니다.(상위 20개국만,확진자 )'+str(CovidCrawler.RATE_STANDARD)+'명 이상 국가만')
+        death_rate_action.triggered.connect(self.show_death_rate)
+        
+        refresh_action=QAction(QIcon('refresh.png'),'최신정보로 갱신',self)
+        refresh_action.setStatusTip('최신 정보를 불러옵니다.')
+        refresh_action.triggered.connect(self.refresh)
         
         exit_action = QAction(QIcon('exit.png'),'Exit', self)
         exit_action.setShortcut('Ctrl+Q')
@@ -123,6 +135,9 @@ class CovidWindow(QMainWindow):#Covid Windows
         menu.addAction(death_action)
         menu.addAction(released_action)
         menu.addAction(increasement_action)
+        menu.addAction(released_rate_action)
+        menu.addAction(death_rate_action)
+        menu.addAction(refresh_action)
         menu.addAction(exit_action)
         
     def center(self):
@@ -156,6 +171,16 @@ class CovidWindow(QMainWindow):#Covid Windows
         self.selected_menu=MENU_CODE['INCREASEMENT']
         self.central_widget.set_changing_text("전날 대비 증가 수")
         self.central_widget.set_data_text(increasement_info,self.selected_menu)
+    def show_released_rate(self):
+        released_rate_info=self.covid_crawler.get_released_rate()
+        self.selected_menu=MENU_CODE['RELEASED_RATE']
+        self.central_widget.set_changing_text("완치(%)")
+        self.central_widget.set_data_text(released_rate_info,self.selected_menu)
+    def show_death_rate(self):
+        death_rate_info=self.covid_crawler.get_death_rate()
+        self.selected_menu=MENU_CODE['DEATH_RATE']
+        self.central_widget.set_changing_text("사망(%)")
+        self.central_widget.set_data_text(death_rate_info,self.selected_menu)
     
     def refresh(self):
         if self.covid_crawler.crawl_data():
