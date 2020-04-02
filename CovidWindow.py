@@ -7,6 +7,7 @@ Created on Tue Mar 31 12:51:53 2020
 from PyQt5.QtWidgets import QApplication,QMainWindow,QAction,qApp,QDesktopWidget
 from PyQt5.QtWidgets import QWidget,QGridLayout,QLabel
 from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import QDateTime
 import CovidCrawler,sys
 
 MENU_CODE={'CONFIRMED':1,'ACTIVE':2,'DEATH':3,'RELEASED':4,'INCREASEMENT':5,'RELEASED_RATE':6,'DEATH_RATE':7} #confirm selected menu to use refresh
@@ -84,6 +85,8 @@ class CovidWindow(QMainWindow):#Covid Windows
         self.setWindowTitle('COVID19 세계현황')
         self.resize(800,640)
         self.show_confirmed()
+        self.refresh_date_time()
+        self.show_date_time()
         self.center()
         self.show()
         
@@ -151,36 +154,53 @@ class CovidWindow(QMainWindow):#Covid Windows
         self.selected_menu=MENU_CODE['CONFIRMED']
         self.central_widget.set_changing_text("확진자 수")
         self.central_widget.set_data_text(confirmed_info,self.selected_menu)
+        self.show_date_time()
     def show_active(self):
         active_info=self.covid_crawler.get_actvie()
         self.selected_menu=MENU_CODE['ACTIVE']
         self.central_widget.set_changing_text("치료중")
         self.central_widget.set_data_text(active_info,self.selected_menu)
+        self.show_date_time()
     def show_death(self):
         death_info=self.covid_crawler.get_death()
         self.selected_menu=MENU_CODE['DEATH']
         self.central_widget.set_changing_text("사망자")
         self.central_widget.set_data_text(death_info,self.selected_menu)
+        self.show_date_time()
     def show_released(self):
         released_info=self.covid_crawler.get_released()
         self.selected_menu=MENU_CODE['RELEASED']
         self.central_widget.set_changing_text("완치")
         self.central_widget.set_data_text(released_info,self.selected_menu)
+        self.show_date_time()
     def show_increasement(self):
         increasement_info=self.covid_crawler.get_confirmed_increasement()
         self.selected_menu=MENU_CODE['INCREASEMENT']
         self.central_widget.set_changing_text("전날 대비 증가 수")
         self.central_widget.set_data_text(increasement_info,self.selected_menu)
+        self.show_date_time()
     def show_released_rate(self):
         released_rate_info=self.covid_crawler.get_released_rate()
         self.selected_menu=MENU_CODE['RELEASED_RATE']
         self.central_widget.set_changing_text("완치(%)")
         self.central_widget.set_data_text(released_rate_info,self.selected_menu)
+        self.show_date_time()
     def show_death_rate(self):
         death_rate_info=self.covid_crawler.get_death_rate()
         self.selected_menu=MENU_CODE['DEATH_RATE']
         self.central_widget.set_changing_text("사망(%)")
         self.central_widget.set_data_text(death_rate_info,self.selected_menu)
+        self.show_date_time()
+        
+    def refresh_date_time(self): #refresh last datatime
+        self.date_time= QDateTime.currentDateTime()
+        
+    def show_date_time(self):
+        try:
+            self.statusBar().showMessage('마지막 데이터 갱신(refresh)일자: '+self.date_time.toString('yyyy년 MM월 dd일 hh:mm:ss'))
+        except:
+            self.refresh_date_time()
+            self.show_date_time()
     
     def refresh(self):
         if self.covid_crawler.crawl_data():
@@ -194,6 +214,10 @@ class CovidWindow(QMainWindow):#Covid Windows
                 self.show_released
             else:
                 self.show_increasement()
+            
+            self.refresh_date_time()
+            
+        self.show_date_time()
                 
 
 if __name__ == '__main__':

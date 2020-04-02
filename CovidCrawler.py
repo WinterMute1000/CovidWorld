@@ -98,7 +98,6 @@ class CovidCrawler:
             
     def get_death_rate(self):
         return self.world_death_rate
-            
     
     def set_data(self):
         self.set_confirmed()
