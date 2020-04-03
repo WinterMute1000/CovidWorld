@@ -4,10 +4,11 @@ Created on Tue Mar 31 12:51:53 2020
 
 @author: User
 """
-from PyQt5.QtWidgets import QApplication,QMainWindow,QAction,qApp,QDesktopWidget
-from PyQt5.QtWidgets import QWidget,QGridLayout,QLabel
+from PyQt5.QtWidgets import QApplication,QMainWindow,QAction,qApp,QDesktopWidget,QHBoxLayout
+from PyQt5.QtWidgets import QWidget,QGridLayout,QLabel,QVBoxLayout
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import QDateTime
+import CovidGraph
 import CovidCrawler,sys
 
 MENU_CODE={'CONFIRMED':1,'ACTIVE':2,'DEATH':3,'RELEASED':4,'INCREASEMENT':5,'RELEASED_RATE':6,'DEATH_RATE':7} #confirm selected menu to use refresh
@@ -22,21 +23,31 @@ class CovidWindow(QMainWindow):#Covid Windows
             self.show()
             
         def init_layout(self):
-            self.grid=QGridLayout()
-            self.setLayout(self.grid)
+            self.ranking_layout=QGridLayout()
             self.nation_label=QLabel("국가") #fixed labed
             self.changing_label=QLabel(" ") #chaing label by selected
             
-            self.grid.addWidget(self.nation_label,0,0)
-            self.grid.addWidget(self.changing_label,0,1)
+            self.ranking_layout.addWidget(self.nation_label,0,0)
+            self.ranking_layout.addWidget(self.changing_label,0,1)
             
             self.data_label=[] #data saved label
             
             for i in range(CovidCrawler.MAX_TOP): #make label
                 new_labels=[QLabel(" "),QLabel(" ")]
-                self.grid.addWidget(new_labels[0],i+1,0)
-                self.grid.addWidget(new_labels[1],i+1,1)
+                self.ranking_layout.addWidget(new_labels[0],i+1,0)
+                self.ranking_layout.addWidget(new_labels[1],i+1,1)
                 self.data_label.append(new_labels)
+                
+            self.graph=CovidGraph.CovidGraph()
+            self.graph_layout=QVBoxLayout() #graph layout
+            self.graph_layout.addWidget(self.graph.return_cavas())
+           
+            self.layout=QHBoxLayout()
+            self.layout.addLayout(self.ranking_layout)
+            self.layout.addLayout(self.graph_layout)
+            
+            self.setLayout(self.layout)
+            
         def center(self):
             qr = self.frameGeometry()
             cp = QDesktopWidget().availableGeometry().center()
@@ -61,7 +72,7 @@ class CovidWindow(QMainWindow):#Covid Windows
                 elif selected_menu==MENU_CODE['RELEASED']:
                     measure=d['released']
                 elif selected_menu==MENU_CODE['INCREASEMENT']:
-                    measure=d['confirmed']-d['confirmed_prev']
+                    measure=d['confirmed']-d['confirmed_prev'] if 'confirmed_prev' in d else d['confirmed']
                 elif selected_menu==MENU_CODE['RELEASED_RATE']:
                     measure=str(d['releasedRate'])+'%'
                 elif selected_menu==MENU_CODE['DEATH_RATE']:
@@ -72,6 +83,32 @@ class CovidWindow(QMainWindow):#Covid Windows
                 
                 label_idx+=1
                     
+        def set_graph(self,data,selected_menu):
+            x=[] #nations
+            y=[] #show y data
+                    
+            for nation in data:
+                x.append(nation['cc'])
+                    
+                if selected_menu==MENU_CODE['CONFIRMED']:
+                    y.append(nation['confirmed'])
+                elif selected_menu==MENU_CODE['ACTIVE']:
+                    y.append(nation['active'])
+                elif selected_menu==MENU_CODE['DEATH']:
+                    y.append(nation['death'])
+                elif selected_menu==MENU_CODE['RELEASED']:
+                    y.append(nation['released'])
+                elif selected_menu==MENU_CODE['INCREASEMENT']:
+                    y.append(nation['confirmed']-nation['confirmed_prev']) if 'confirmed_prev' in nation else y.append(nation['confirmed'])
+                elif selected_menu==MENU_CODE['RELEASED_RATE']:
+                    y.append(float(nation['releasedRate']))
+                elif selected_menu==MENU_CODE['DEATH_RATE']:
+                    y.append(float(nation['deathRate']))
+                else:
+                    print('Invalid Selected Menu')
+                    qApp.exit()
+                
+            self.graph.draw_bar_graph(x,y)
                     
     def __init__(self):
         super().__init__()
@@ -131,17 +168,17 @@ class CovidWindow(QMainWindow):#Covid Windows
         
         menubar=self.menuBar()
         menubar.setNativeMenuBar(False)
-        menu=menubar.addMenu('&Menu')
+        data_menu=menubar.addMenu('&Menu')
         
-        menu.addAction(confirmed_action)
-        menu.addAction(active_action)
-        menu.addAction(death_action)
-        menu.addAction(released_action)
-        menu.addAction(increasement_action)
-        menu.addAction(released_rate_action)
-        menu.addAction(death_rate_action)
-        menu.addAction(refresh_action)
-        menu.addAction(exit_action)
+        data_menu.addAction(confirmed_action)
+        data_menu.addAction(active_action)
+        data_menu.addAction(death_action)
+        data_menu.addAction(released_action)
+        data_menu.addAction(increasement_action)
+        data_menu.addAction(released_rate_action)
+        data_menu.addAction(death_rate_action)
+        data_menu.addAction(refresh_action)
+        data_menu.addAction(exit_action)
         
     def center(self):
         qr = self.frameGeometry()
@@ -154,42 +191,49 @@ class CovidWindow(QMainWindow):#Covid Windows
         self.selected_menu=MENU_CODE['CONFIRMED']
         self.central_widget.set_changing_text("확진자 수")
         self.central_widget.set_data_text(confirmed_info,self.selected_menu)
+        self.central_widget.set_graph(confirmed_info,self.selected_menu)
         self.show_date_time()
     def show_active(self):
         active_info=self.covid_crawler.get_actvie()
         self.selected_menu=MENU_CODE['ACTIVE']
         self.central_widget.set_changing_text("치료중")
         self.central_widget.set_data_text(active_info,self.selected_menu)
+        self.central_widget.set_graph(active_info,self.selected_menu)
         self.show_date_time()
     def show_death(self):
         death_info=self.covid_crawler.get_death()
         self.selected_menu=MENU_CODE['DEATH']
         self.central_widget.set_changing_text("사망자")
         self.central_widget.set_data_text(death_info,self.selected_menu)
+        self.central_widget.set_graph(death_info,self.selected_menu)
         self.show_date_time()
     def show_released(self):
         released_info=self.covid_crawler.get_released()
         self.selected_menu=MENU_CODE['RELEASED']
         self.central_widget.set_changing_text("완치")
         self.central_widget.set_data_text(released_info,self.selected_menu)
+        self.central_widget.set_graph(released_info,self.selected_menu)
         self.show_date_time()
     def show_increasement(self):
         increasement_info=self.covid_crawler.get_confirmed_increasement()
         self.selected_menu=MENU_CODE['INCREASEMENT']
         self.central_widget.set_changing_text("전날 대비 증가 수")
-        self.central_widget.set_data_text(increasement_info,self.selected_menu)
+        self.central_widget.set_data_text(increasement_info,self.selected_menu) 
+        self.central_widget.set_graph(increasement_info,self.selected_menu)
         self.show_date_time()
     def show_released_rate(self):
         released_rate_info=self.covid_crawler.get_released_rate()
         self.selected_menu=MENU_CODE['RELEASED_RATE']
         self.central_widget.set_changing_text("완치(%)")
         self.central_widget.set_data_text(released_rate_info,self.selected_menu)
+        self.central_widget.set_graph(released_rate_info,self.selected_menu)
         self.show_date_time()
     def show_death_rate(self):
         death_rate_info=self.covid_crawler.get_death_rate()
         self.selected_menu=MENU_CODE['DEATH_RATE']
         self.central_widget.set_changing_text("사망(%)")
         self.central_widget.set_data_text(death_rate_info,self.selected_menu)
+        self.central_widget.set_graph(death_rate_info,self.selected_menu)
         self.show_date_time()
         
     def refresh_date_time(self): #refresh last datatime
@@ -212,13 +256,19 @@ class CovidWindow(QMainWindow):#Covid Windows
                 self.show_death()
             elif self.selected_menu==MENU_CODE['RELEASED']:
                 self.show_released
-            else:
+            elif self.selected_menu==MENU_CODE['INCREASMENT']:
                 self.show_increasement()
+            elif self.selected_menu==MENU_CODE['RELEASED_RATE']:
+                self.show_released_rate()
+            elif self.selected_menu==MENU_CODE['DEATH_RATE']:
+                self.show_death_rate()
+            else:
+                print('Invalid Selected Menu')
+                qApp.exit()
             
             self.refresh_date_time()
             
         self.show_date_time()
-                
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
