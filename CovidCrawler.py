@@ -15,7 +15,7 @@ CC_MAPPING={'US':'미국','IT':'이탈리아','ES':'스페인','CN':'중국','DE
             'IL':'이스라엘','BR':'브라질','AU':'호주','NO':'노르웨이','JP':'일본'} 
 #just top 20
 MAX_TOP=20
-RATE_STANDARD=1000
+RATE_STANDARD=5000
 #Confirm rate standard
 class CovidCrawler:
     last_updated=0
